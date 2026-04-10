@@ -45,6 +45,13 @@
             </intent-filter>
         </activity>
 
+        <!-- ZXing theme override: fixes "Theme.Material.NoTitleBar not found" with compileSdk 34 -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            tools:replace="android:screenOrientation,android:theme" />
+
         <service
             android:name=".service.HotspotService"
             android:exported="false"
