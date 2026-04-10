@@ -1,5 +1,8 @@
 <resources>
-    <style name="Theme.HotspotX" parent="android:Theme.Material.NoTitleBar">
+    <!-- Base theme for the app. Pure Compose app — XML theme only needs a valid
+         framework base. android:Theme.DeviceDefault.NoActionBar is available on
+         all API levels this app supports (minSdk 26+) and requires no extra deps. -->
+    <style name="Theme.HotspotX" parent="android:Theme.DeviceDefault.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
