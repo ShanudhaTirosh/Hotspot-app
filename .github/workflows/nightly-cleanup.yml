@@ -1,0 +1,43 @@
+name: 🧹 Nightly Cleanup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 02:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    name: 🧹 Prune stale artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: 🗑️ Delete artifacts older than 30 days (debug builds)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            const { data: { artifacts } } = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            let deleted = 0;
+            for (const art of artifacts) {
+              const isDebug = art.name.includes('-debug-');
+              const isOld   = new Date(art.created_at) < cutoff;
+              if (isDebug && isOld) {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: art.id
+                });
+                console.log(`Deleted: ${art.name}`);
+                deleted++;
+              }
+            }
+            console.log(`Total deleted: ${deleted}`);
+            core.summary.addRaw(`## 🧹 Cleanup\nDeleted **${deleted}** stale debug artifacts.`);
+            await core.summary.write();
