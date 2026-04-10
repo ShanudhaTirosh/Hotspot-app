@@ -45,11 +45,13 @@
             </intent-filter>
         </activity>
 
-        <!-- ZXing theme override: fixes "Theme.Material.NoTitleBar not found" with compileSdk 34 -->
+        <!-- Override ZXing's CaptureActivity theme — its default references
+             android:style/Theme.Material.NoTitleBar which AAPT2 rejects on
+             compileSdk 34. Point it at our own (now valid) app theme instead. -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:theme="@style/Theme.HotspotX"
             tools:replace="android:screenOrientation,android:theme" />
 
         <service
