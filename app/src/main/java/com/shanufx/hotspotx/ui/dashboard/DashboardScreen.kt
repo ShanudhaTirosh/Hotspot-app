@@ -212,7 +212,7 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "USB Tethering must be enabled manually in Android Settings > Network & Internet > Hotspot. Tap "USB Tether" above.",
+                        "USB Tethering must be enabled manually in Android Settings > Network & Internet > Hotspot. Tap \"USB Tether\" above.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
