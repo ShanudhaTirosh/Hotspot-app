@@ -1,0 +1,191 @@
+name: 📦 Extract Zip & Build APK
+
+# ─────────────────────────────────────────────────────────────
+#  Fires when any *.zip is pushed to the repo root on these
+#  branches.  Everything — extract, commit, build — happens
+#  in one workflow, no dispatch needed.
+# ─────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - '*.zip'
+
+env:
+  JAVA_VERSION: '17'
+  GRADLE_OPTS: >-
+    -Dorg.gradle.daemon=false
+    -Dorg.gradle.jvmargs=-Xmx4g
+    -Dorg.gradle.parallel=true
+    -Dorg.gradle.caching=true
+
+jobs:
+  extract-and-build:
+    name: 📦 Extract · Commit · Build APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+
+      # ── 1. Checkout ──────────────────────────────────────────
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Find zip at root ──────────────────────────────────
+      - name: 🔍 Find zip file
+        id: zip
+        run: |
+          ZIP=$(find . -maxdepth 1 -name "*.zip" | sort | head -1)
+          if [ -z "$ZIP" ]; then
+            echo "::error::No .zip file found at repo root."
+            exit 1
+          fi
+          echo "path=$ZIP"               >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$ZIP")" >> "$GITHUB_OUTPUT"
+          echo "✅ Found: $ZIP"
+
+      # ── 3. Extract zip ───────────────────────────────────────
+      #   • Strips the single top-level folder if present
+      #     (e.g. HotspotX/ inside the zip → lands at repo root)
+      #   • Replaces existing files
+      #   • Never touches .github/
+      - name: 📂 Extract zip to repo root
+        run: |
+          set -euo pipefail
+          ZIP="${{ steps.zip.outputs.path }}"
+
+          TMPDIR="$(mktemp -d)"
+          unzip -q -o "$ZIP" -d "$TMPDIR"
+
+          # Strip single top-level folder if zip has one
+          ITEMS=( "$TMPDIR"/* )
+          if [ "${#ITEMS[@]}" -eq 1 ] && [ -d "${ITEMS[0]}" ]; then
+            SRC="${ITEMS[0]}"
+          else
+            SRC="$TMPDIR"
+          fi
+          echo "Source root: $SRC"
+
+          # Sync to repo root — never overwrite .github/
+          rsync -a --exclude='.github/' "$SRC/" ./
+
+          # Remove the zip so it doesn't sit in the repo
+          rm -f "$ZIP"
+          echo "✅ Extraction done."
+
+      # ── 4. Generate any missing build files ─────────────────
+      - name: 🔧 Generate missing build artefacts
+        run: |
+          set -euo pipefail
+
+          # ── gradlew ──────────────────────────────────────────
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew missing — fetching Gradle 8.7 binary"
+            curl -fsSL \
+              "https://services.gradle.org/distributions/gradle-8.7-bin.zip" \
+              -o /tmp/gradle-dist.zip
+            unzip -q /tmp/gradle-dist.zip -d /tmp/gradle-dist
+            GRADLE_BIN=$(find /tmp/gradle-dist -name "gradle" -type f | head -1)
+            "$GRADLE_BIN" wrapper --gradle-version=8.7 --distribution-type=bin
+          fi
+          chmod +x gradlew
+
+          # ── gradle-wrapper.jar ───────────────────────────────
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "gradle-wrapper.jar missing — downloading"
+            mkdir -p gradle/wrapper
+            curl -fsSL \
+              "https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
+              -o gradle/wrapper/gradle-wrapper.jar
+          fi
+
+          # ── local.properties (SDK path for CI) ───────────────
+          if [ ! -f "local.properties" ]; then
+            echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          fi
+
+          echo "✅ Build files ready."
+
+      # ── 5. Commit & push extracted project ──────────────────
+      - name: 💾 Commit extracted files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          # Safety: never stage workflow files
+          git restore --staged .github/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "📦 Extract ${{ steps.zip.outputs.name }} [skip ci]"
+            git push
+            echo "✅ Pushed."
+          fi
+
+      # ── 6. Java 17 ───────────────────────────────────────────
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      # ── 7. Validate Gradle wrapper ───────────────────────────
+      - name: ✅ Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v3
+
+      # ── 8. Build debug APK ───────────────────────────────────
+      - name: 🔨 Build debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      # ── 9. Rename APK ────────────────────────────────────────
+      - name: 📝 Rename APK
+        id: apk
+        run: |
+          APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          SIZE=$(du -sh "$APK" | cut -f1)
+          SHA="${GITHUB_SHA::7}"
+
+          # Read versionName from build.gradle.kts
+          VER=$(grep 'versionName' app/build.gradle.kts \
+                | head -1 | grep -o '"[^"]*"' | tr -d '"')
+          VER="${VER:-1.0.0}"
+
+          OUTNAME="HotspotX-debug-v${VER}-${SHA}.apk"
+          mkdir -p out
+          cp "$APK" "out/$OUTNAME"
+
+          echo "filename=$OUTNAME" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE"        >> "$GITHUB_OUTPUT"
+          echo "version=$VER"      >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA"          >> "$GITHUB_OUTPUT"
+
+      # ── 10. Upload APK artifact ──────────────────────────────
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.filename }}
+          path: out/*.apk
+          retention-days: 30
+          compression-level: 9
+
+      # ── 11. Job summary ──────────────────────────────────────
+      - name: 📊 Summary
+        run: |
+          {
+            echo "## ✅ Build Complete"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Zip** | \`${{ steps.zip.outputs.name }}\` |"
+            echo "| **APK** | \`${{ steps.apk.outputs.filename }}\` |"
+            echo "| **Version** | v${{ steps.apk.outputs.version }} |"
+            echo "| **Commit** | \`${{ steps.apk.outputs.sha }}\` |"
+            echo "| **Size** | ${{ steps.apk.outputs.size }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
