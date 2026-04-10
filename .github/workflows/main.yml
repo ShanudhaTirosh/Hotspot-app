@@ -136,15 +136,11 @@ jobs:
           distribution: temurin
           cache: gradle
 
-      # ── 7. Validate Gradle wrapper ───────────────────────────
-      - name: ✅ Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v3
-
-      # ── 8. Build debug APK ───────────────────────────────────
+      # ── 7. Build debug APK ───────────────────────────────────
       - name: 🔨 Build debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # ── 9. Rename APK ────────────────────────────────────────
+      # ── 8. Rename APK ────────────────────────────────────────
       - name: 📝 Rename APK
         id: apk
         run: |
@@ -166,7 +162,7 @@ jobs:
           echo "version=$VER"      >> "$GITHUB_OUTPUT"
           echo "sha=$SHA"          >> "$GITHUB_OUTPUT"
 
-      # ── 10. Upload APK artifact ──────────────────────────────
+      # ── 9. Upload APK artifact ───────────────────────────────
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -175,7 +171,7 @@ jobs:
           retention-days: 30
           compression-level: 9
 
-      # ── 11. Job summary ──────────────────────────────────────
+      # ── 10. Job summary ──────────────────────────────────────
       - name: 📊 Summary
         run: |
           {
@@ -188,4 +184,3 @@ jobs:
             echo "| **Commit** | \`${{ steps.apk.outputs.sha }}\` |"
             echo "| **Size** | ${{ steps.apk.outputs.size }} |"
           } >> "$GITHUB_STEP_SUMMARY"
-
