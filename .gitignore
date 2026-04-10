@@ -1,0 +1,62 @@
+# ─── Gradle ───────────────────────────────────────────────
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ─── Android ──────────────────────────────────────────────
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# ─── Signing / Keystore (NEVER commit these) ──────────────
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.b64
+keystore.properties
+
+# ─── IntelliJ / Android Studio ────────────────────────────
+*.iml
+.idea/
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+*.hprof
+
+# ─── ProGuard ─────────────────────────────────────────────
+proguard/
+dump.txt
+aapt_rules.txt
+
+# ─── Kotlin ───────────────────────────────────────────────
+.kotlin/
+
+# ─── Misc ─────────────────────────────────────────────────
+*.log
+*.tmp
+*.swp
+*.swo
+*.orig
+*~
+.env
+.env.*

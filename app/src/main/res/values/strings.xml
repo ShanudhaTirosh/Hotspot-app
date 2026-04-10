@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">ShanuFx HotspotX</string>
+    <string name="hotspot_service_channel">Hotspot Service</string>
+    <string name="hotspot_service_channel_desc">Shows active hotspot status and controls</string>
+    <string name="notification_title_active">HotspotX Active</string>
+    <string name="notification_title_inactive">HotspotX Stopped</string>
+    <string name="stop_hotspot">Stop Hotspot</string>
+    <string name="open_dashboard">Dashboard</string>
+    <string name="perm_rationale_location">Location permission is required to read Wi-Fi SSID and manage the hotspot on Android 10+.</string>
+    <string name="perm_rationale_phone">Phone state permission is required to access network usage statistics.</string>
+    <string name="perm_rationale_notification">Notification permission is required to show the persistent hotspot status notification on Android 13+.</string>
+    <string name="usb_tethering_note">USB Tethering requires manual activation. Tap below to open Android Settings.</string>
+    <string name="feature_requires_root">Full packet-level blocking requires root. The app manages a local blocklist and excludes blocked devices on hotspot restart.</string>
+</resources>
